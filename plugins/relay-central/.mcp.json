@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "relay-central": {
+      "type": "stdio",
+      "command": "relay-central",
+      "args": ["mcp"]
+    }
+  }
+}

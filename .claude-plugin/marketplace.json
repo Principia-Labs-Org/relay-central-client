@@ -1,0 +1,12 @@
+{
+  "name": "relay-platform",
+  "metadata": { "description": "Relay Central tools for organization configuration, retrieval and analytics." },
+  "owner": { "name": "Principia Labs" },
+  "plugins": [
+    {
+      "name": "relay-central",
+      "source": "./plugins/relay-central",
+      "description": "Read and configure your Relay Central organization."
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "name": "relay-platform",
+  "plugins": [
+    {
+      "name": "relay-central",
+      "source": { "source": "local", "path": "./plugins/relay-central" },
+      "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
+      "category": "Productivity"
+    }
+  ]
+}

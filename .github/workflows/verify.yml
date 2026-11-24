@@ -1,0 +1,32 @@
+name: Verify installed client
+on: workflow_dispatch
+permissions:
+  contents: read
+
+jobs:
+  client:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+      - run: npm ci && npm test
+      - run: python3 test/tty-login.py
+      - name: Check out the qualified Central API and fixtures
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: Principia-Labs-Org/relay-central
+          ref: 92ac5d5a6c8f40e141b162857462dcea2f039f22
+          path: central-fixture
+          token: ${{ secrets.CENTRAL_READ_TOKEN }}
+          persist-credentials: false
+      - run: sudo apt-get update && sudo apt-get install -y postgresql-client python3-cryptography python3-jsonschema
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec
+        with:
+          toolchain: stable
+      - run: cargo build --manifest-path central-fixture/Cargo.toml --locked --bin relay-central
+      - name: Test the packed CLI and MCP server against Central
+        env:
+          CENTRAL_CHECKOUT: ${{ github.workspace }}/central-fixture
+        run: /usr/bin/python3 test/central-e2e.py

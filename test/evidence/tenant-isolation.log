@@ -1,0 +1,18 @@
+{"transport": "cli", "A_reads_A": 200, "A_updates_A": 200, "own_org_configs_match_token_identities": true, "A_org_config_updated_and_read_back": true, "B_org_config_unchanged_including_revision": true, "A_reads_B": 404, "A_updates_B_with_current_revision": 404, "B_reads_B": 200, "B_unchanged_including_revision": true}
+{"transport": "mcp", "A_reads_A": 200, "A_updates_A": 200, "own_org_configs_match_token_identities": true, "A_org_config_updated_and_read_back": true, "B_org_config_unchanged_including_revision": true, "A_reads_B": 404, "A_updates_B_with_current_revision": 404, "B_reads_B": 200, "B_unchanged_including_revision": true}
+Codex verified A identity, retrieved A's campaign, updated A and read its next revision. B's campaign read and valid update both returned HTTP 404. An independent B login confirmed its campaign and revision were unchanged.
+Claude Code read A's configuration and updated A's campaign. B's campaign GET and PATCH returned HTTP 404. B's own token confirmed its record and revision were unchanged. No Central token reached the model.
+grok: A identity verified
+grok: A campaign verified
+grok: A update verified
+grok: A readback verified
+grok: B read denied verified
+grok: B update denied verified
+grok: B unchanged including revision
+muse: A identity verified
+muse: A campaign verified
+muse: A update verified
+muse: A readback verified
+muse: B read denied verified
+muse: B update denied verified
+muse: B unchanged including revision
