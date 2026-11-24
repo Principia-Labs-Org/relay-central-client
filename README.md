@@ -15,8 +15,9 @@ Choose your app for a copyable setup prompt.
 For CLI and local MCP setups, use Node.js 22 or newer, Git and a user-writable npm installation. Start in an empty directory you can keep. The following commands install release v1.0.1 from its reviewed commit. Each command must succeed before you continue. Grok Bot needs its own secure connector setup on its shared computer. Personal Muse can use a Custom Connector with a credential restricted to Central. [Host-specific instructions](docs/hosts.md)
 
 ```sh
-git init relay-central-client &&
+mkdir relay-central-client &&
 cd relay-central-client &&
+git init &&
 git remote add origin https://github.com/Principia-Labs-Org/relay-central-client.git &&
 git fetch --depth 1 origin 37a54d41bc6e8a69cf6c24d87ea5a7eb2dc89ad2 &&
 git checkout --detach FETCH_HEAD &&
