@@ -12,13 +12,16 @@ Choose your app for a copyable setup prompt.
 | Coding agents | [Codex](https://docs.hellocrew.ai/clients/codex/) · [Claude Code](https://docs.hellocrew.ai/clients/claude/) · [Grok Build](https://docs.hellocrew.ai/clients/grok/) · [Muse Code](https://docs.hellocrew.ai/clients/muse/) |
 | Terminal and other MCP hosts | [CLI](https://docs.hellocrew.ai/clients/cli/) · [MCP](https://docs.hellocrew.ai/clients/mcp/) |
 
-For CLI and local MCP setups, use Node.js 22 or newer, Git and a user-writable npm installation. Start in an empty directory you can keep. Each command must succeed before you continue. Grok Bot needs its own secure connector setup on its shared computer. Personal Muse can use a Custom Connector with a credential restricted to Central. [Host-specific instructions](docs/hosts.md)
+For CLI and local MCP setups, use Node.js 22 or newer, Git and a user-writable npm installation. Start in an empty directory you can keep. The following commands install release v1.0.1 from its reviewed commit. Each command must succeed before you continue. Grok Bot needs its own secure connector setup on its shared computer. Personal Muse can use a Custom Connector with a credential restricted to Central. [Host-specific instructions](docs/hosts.md)
 
 ```sh
-git clone --branch v1.0.1 --depth 1 https://github.com/Principia-Labs-Org/relay-central-client.git
-cd relay-central-client
-npm ci --ignore-scripts
-npm link --ignore-scripts
+git init relay-central-client &&
+cd relay-central-client &&
+git remote add origin https://github.com/Principia-Labs-Org/relay-central-client.git &&
+git fetch --depth 1 origin 37a54d41bc6e8a69cf6c24d87ea5a7eb2dc89ad2 &&
+git checkout --detach FETCH_HEAD &&
+npm ci --ignore-scripts &&
+npm link --ignore-scripts &&
 relay-central --version
 ```
 
@@ -78,4 +81,4 @@ relay-central mcp call staffWorkQueue --json '{"view":"new","limit":5}'
 
 The publication and regression workflow uses the installed package against disposable Central and PostgreSQL. [Run the tests](docs/testing.md)
 
-The two-organization release tests cover the CLI, MCP, Codex, Claude Code, Grok Build and Muse Code. Organization A can update its campaign. Central returns HTTP 404 for A's read and revision-valid edit of B's campaign, and B's own token confirms its record and revision are intact. The four desktop and personal app guides describe vendor-documented connection methods. Signed-in end-to-end checks in those four interfaces are pending. [Tenant isolation evidence and reproduction](https://github.com/Principia-Labs-Org/relay-central-client/blob/v1.0.1/test/evidence/README.md)
+The two-organization release tests cover the CLI, MCP, Codex, Claude Code, Grok Build and Muse Code. Organization A can update its campaign. Central returns HTTP 404 for A's read and revision-valid edit of B's campaign, and B's own token confirms its record and revision are intact. The four desktop and personal app guides describe vendor-documented connection methods. Signed-in end-to-end checks in those four interfaces are pending. [Tenant isolation evidence and reproduction](https://github.com/Principia-Labs-Org/relay-central-client/blob/37a54d41bc6e8a69cf6c24d87ea5a7eb2dc89ad2/test/evidence/README.md)

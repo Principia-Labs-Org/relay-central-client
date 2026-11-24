@@ -42,13 +42,13 @@ Enter the token in Muse’s secure credential form. If Muse asks for the value i
 
 This connection runs on your computer. Cloud chats require a separately configured web-compatible plugin and authorization. [ChatGPT Desktop setup prompt](https://docs.hellocrew.ai/clients/chatgpt-desktop/) · [OpenAI’s MCP configuration guide](https://learn.chatgpt.com/docs/extend/mcp#connect-codex-to-an-mcp-server)
 
-For a workspace plugin usable in an eligible local ChatGPT thread, a workspace admin can open **Admin Console → Plugins → Add → Import marketplace**. Enter `https://github.com/Principia-Labs-Org/relay-central-client`, leave the marketplace path empty and select the tag `v1.0.1`. Review the import results and access for the intended roles. Each user still needs the client installed and signed in on their computer. If the workspace offers the plugin in a local desktop thread, install it, start a new thread and ask it to call `staffMe`. [OpenAI marketplace import](https://help.openai.com/en/articles/20001504-importing-and-syncing-plugin-marketplaces-from-github) · [ChatGPT plugin availability](https://help.openai.com/en/articles/20001256-plugins-in-chatgpt)
+For a workspace plugin usable in an eligible local ChatGPT thread, a workspace admin can open **Admin Console → Plugins → Add → Import marketplace**. Enter `https://github.com/Principia-Labs-Org/relay-central-client`, leave the marketplace path empty and enter `37a54d41bc6e8a69cf6c24d87ea5a7eb2dc89ad2` in **Branch, tag, or commit** for release v1.0.1. Review the import results and access for the intended roles. Each user still needs the client installed and signed in on their computer. If the workspace offers the plugin in a local desktop thread, install it, start a new thread and ask it to call `staffMe`. [OpenAI marketplace import](https://help.openai.com/en/articles/20001504-importing-and-syncing-plugin-marketplaces-from-github) · [ChatGPT plugin availability](https://help.openai.com/en/articles/20001256-plugins-in-chatgpt)
 
 ## Coding agent plugins
 
 ### Codex
 
-From the tagged client checkout, run the following in a shell that supports `$PWD`. You can also substitute the absolute path to that checkout.
+From the pinned client checkout, run the following in a shell that supports `$PWD`. You can also substitute the absolute path to that checkout.
 
 ```sh
 codex plugin marketplace add "$PWD"
@@ -60,7 +60,7 @@ Start a new Codex session. Ask it to use the Relay Central `staffMe` tool to ide
 
 ### Claude Code
 
-Use the absolute path to the same tagged checkout as the marketplace source.
+Use the absolute path to the same pinned checkout as the marketplace source.
 
 ```sh
 claude plugin marketplace add "$PWD"
