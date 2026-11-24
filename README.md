@@ -4,9 +4,15 @@ Use your organization token to configure Relay Central, retrieve records, update
 
 ## Install and sign in
 
-Each support page has a setup prompt you can copy into your agent. Choose [CLI](https://docs.hellocrew.ai/clients/cli/), [MCP](https://docs.hellocrew.ai/clients/mcp/), [Codex](https://docs.hellocrew.ai/clients/codex/), [Claude Code](https://docs.hellocrew.ai/clients/claude/), [Grok Build](https://docs.hellocrew.ai/clients/grok/), or [Muse Code](https://docs.hellocrew.ai/clients/muse/).
+Choose your app for a copyable setup prompt.
 
-Use Node.js 22 or newer. Install the tagged client in a directory you can keep on this machine.
+| Where you work | Setup guides |
+| --- | --- |
+| Desktop and personal apps | [Grok Bot](https://docs.hellocrew.ai/clients/grok-bot/) · [Meta Muse (personal)](https://docs.hellocrew.ai/clients/muse-personal/) · [Claude Desktop](https://docs.hellocrew.ai/clients/claude-desktop/) · [ChatGPT Desktop](https://docs.hellocrew.ai/clients/chatgpt-desktop/) |
+| Coding agents | [Codex](https://docs.hellocrew.ai/clients/codex/) · [Claude Code](https://docs.hellocrew.ai/clients/claude/) · [Grok Build](https://docs.hellocrew.ai/clients/grok/) · [Muse Code](https://docs.hellocrew.ai/clients/muse/) |
+| Terminal and other MCP hosts | [CLI](https://docs.hellocrew.ai/clients/cli/) · [MCP](https://docs.hellocrew.ai/clients/mcp/) |
+
+For CLI and local MCP setups, use Node.js 22 or newer and install the tagged client on the computer that will run it. For Grok Bot this is the Bot’s computer. Personal Muse connects directly to the Central API through a Custom Connector. [Host-specific instructions](docs/hosts.md)
 
 ```sh
 git clone --branch v1.0.0 --depth 1 https://github.com/Principia-Labs-Org/relay-central-client.git
@@ -66,4 +72,4 @@ relay-central mcp call staffWorkQueue --json '{"view":"new","limit":5}'
 
 The publication and regression workflow uses the installed package against disposable Central and PostgreSQL. [Run the tests](docs/testing.md)
 
-All six clients have a two-organization test. Organization A can update its campaign. Central returns HTTP 404 for A's read and revision-valid edit of B's campaign, and B's own token confirms its record and revision are intact. [Tenant isolation evidence and reproduction](test/evidence/README.md)
+The v1.0.0 two-organization tests cover the CLI, MCP, Codex, Claude Code, Grok Build and Muse Code. Organization A can update its campaign. Central returns HTTP 404 for A's read and revision-valid edit of B's campaign, and B's own token confirms its record and revision are intact. The four desktop and personal app guides describe vendor-documented connection methods. Signed-in end-to-end checks in those four interfaces are pending. [Tenant isolation evidence and reproduction](test/evidence/README.md)
