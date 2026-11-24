@@ -1,0 +1,117 @@
+{
+  "test": "consumer setup connection recipes",
+  "client_version": "1.0.1",
+  "tarball_sha256": "ebca5610e8bf2ce7031aead9e2a0ecda6622eb2a7f2f238f55d141da7a270676",
+  "website_commit": "495889c87bb282128c280e8a21ff12422ad3cc93",
+  "origin": "disposable Central behind loopback HTTPS with an explicitly trusted test CA",
+  "consumer_ui_signed_in": false,
+  "results": [
+    {
+      "guide": "claude-desktop",
+      "prompt_sha256": "06372a1915739bd46fa81b471698528e445fa283bb5a6b25798676d45696b730",
+      "method": "saved login; rendered JSON stdio entry",
+      "result": "staffMe matched fixture organization and role",
+      "recorded_requests": [
+        {
+          "method": "GET",
+          "path": "/openapi/agent.json",
+          "bearer_sent": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/auth/me",
+          "bearer_sent": true
+        },
+        {
+          "method": "GET",
+          "path": "/openapi/agent.json",
+          "bearer_sent": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/auth/me",
+          "bearer_sent": true
+        },
+        {
+          "method": "GET",
+          "path": "/api/auth/me",
+          "bearer_sent": true
+        }
+      ]
+    },
+    {
+      "guide": "chatgpt-desktop",
+      "prompt_sha256": "5ef7722bd217b40bda056dd9a1882722b5dc46b37c27b51b729ebcfd214a4bbe",
+      "method": "saved login; local stdio command",
+      "result": "staffMe matched fixture organization and role",
+      "recorded_requests": [
+        {
+          "method": "GET",
+          "path": "/openapi/agent.json",
+          "bearer_sent": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/auth/me",
+          "bearer_sent": true
+        },
+        {
+          "method": "GET",
+          "path": "/openapi/agent.json",
+          "bearer_sent": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/auth/me",
+          "bearer_sent": true
+        },
+        {
+          "method": "GET",
+          "path": "/api/auth/me",
+          "bearer_sent": true
+        }
+      ]
+    },
+    {
+      "guide": "grok-bot",
+      "prompt_sha256": "6ba19c0bba89152d439045ebdac57600e0286c8e3ae421594c145709fc615651",
+      "method": "paired process environment; stdio command; empty profile",
+      "result": "staffMe matched fixture organization and role",
+      "recorded_requests": [
+        {
+          "method": "GET",
+          "path": "/openapi/agent.json",
+          "bearer_sent": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/auth/me",
+          "bearer_sent": true
+        },
+        {
+          "method": "GET",
+          "path": "/api/auth/me",
+          "bearer_sent": true
+        }
+      ]
+    },
+    {
+      "guide": "muse-personal",
+      "prompt_sha256": "5c253265d2262f5f2db5b478c4c99808029c505b29c76852742858793341fcdf",
+      "method": "anonymous schema; origin-bound bearer HTTPS first read; redirects disabled",
+      "result": "staffMe matched fixture organization and role",
+      "recorded_requests": [
+        {
+          "method": "GET",
+          "path": "/openapi/agent.json",
+          "bearer_sent": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/auth/me",
+          "bearer_sent": true
+        }
+      ]
+    }
+  ]
+}
