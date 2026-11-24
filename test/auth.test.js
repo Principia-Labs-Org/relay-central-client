@@ -41,6 +41,13 @@ test('concurrent logins commit complete credentials together', async t => {
   assert.deepEqual(saved, saved.origin === first.origin ? first : second);
 });
 
+test('credential locations are independent of the current working directory', async () => {
+  const options = { configDir: 'relative-location' };
+  await assert.rejects(loadCredentials(options), /absolute path/);
+  await assert.rejects(saveCredentials(first, options), /absolute path/);
+  await assert.rejects(clearCredentials(options), /absolute path/);
+});
+
 test('refuses malformed credentials and insecure login paths', { skip: typeof process.getuid !== 'function' }, async t => {
   const { base, configDir, file, options } = await fixture(t);
   await mkdir(configDir, { mode: 0o700 });

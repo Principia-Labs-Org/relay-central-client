@@ -2,11 +2,13 @@ import { randomUUID } from 'node:crypto';
 import { constants } from 'node:fs';
 import { lstat, mkdir, open, rename, unlink } from 'node:fs/promises';
 import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { isAbsolute, join } from 'node:path';
 import { normalizeOrigin, validateToken } from './central.js';
 
 function directory({ configDir } = {}) {
-  return configDir ?? join(process.env.XDG_CONFIG_HOME || join(homedir(), '.config'), 'relay-central-client');
+  const dir = configDir ?? join(process.env.XDG_CONFIG_HOME || join(homedir(), '.config'), 'relay-central-client');
+  if (!isAbsolute(dir)) throw new Error('Use an absolute path for the private Central login directory.');
+  return dir;
 }
 
 function privateMode(stat) {
@@ -31,7 +33,11 @@ export async function loadCredentials(options) {
   let file;
   try {
     await checkDirectory(dir);
-    file = await open(join(dir, 'credentials.json'), constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
+    const path = join(dir, 'credentials.json');
+    if (!constants.O_NOFOLLOW && !(await lstat(path)).isFile()) {
+      throw new Error('The Central login must be a regular file.');
+    }
+    file = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
     const stat = await file.stat();
     if (!stat.isFile() || !privateMode(stat)) throw new Error('The Central login file must be private to your user (0600).');
     let value;

@@ -9,15 +9,16 @@ const limitParam = { name: 'limit', in: 'query', schema: { type: 'integer' } };
 function document() {
   return {
     servers: [{ url: 'https://different-origin.invalid' }],
+    security: [{ bearerAuth: [] }],
     paths: {
-      '/api/profile': { get: { operationId: 'staffMe', 'x-required-role': 'viewer' } },
+      '/api/auth/me': { get: { operationId: 'staffMe', 'x-required-role': 'viewer' } },
       '/api/records/{id}': {
         get: { operationId: 'lookup', 'x-required-role': 'viewer', parameters: [idParam, limitParam] },
         patch: { operationId: 'save', 'x-required-role': 'admin', parameters: [idParam],
           requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/Update' } } } } }
       }
     },
-    components: { schemas: {
+    components: { securitySchemes: { bearerAuth: { type: 'http', scheme: 'bearer' } }, schemas: {
       Update: { type: 'object', properties: { name: { $ref: '#/components/schemas/Label' } },
         required: ['name'] },
       Label: { type: 'string', maxLength: 80 }
@@ -41,7 +42,7 @@ async function fixture(t, { role = 'admin', spec = document(), responder } = {})
     requests.push({ method: req.method, url: req.url, auth: req.headers.authorization, body });
     res.setHeader('Content-Type', 'application/json');
     if (req.url === '/openapi/agent.json') return res.end(JSON.stringify(spec));
-    if (req.url === '/api/profile') return res.end(JSON.stringify({ user_id: 'user', org_id: 'org', role }));
+    if (req.url === '/api/auth/me') return res.end(JSON.stringify({ user_id: 'user', org_id: 'org', role }));
     if (responder) return responder(req, res);
     res.end(JSON.stringify({ received: true }));
   });
@@ -53,7 +54,7 @@ test('derives identity, role and standalone input schemas from the served docume
   const client = await connect({ origin, token });
   assert.deepEqual(client.identity, { role: 'admin', org_id: 'org', user_id: 'user' });
   assert.deepEqual(requests.map(r => [r.url, r.auth]), [
-    ['/openapi/agent.json', undefined], ['/api/profile', 'Bearer ' + token]
+    ['/openapi/agent.json', undefined], ['/api/auth/me', 'Bearer ' + token]
   ]);
   const { inputSchema } = client.operations.find(op => op.name === 'save');
   assert.deepEqual(inputSchema.required, ['id', 'body']);
@@ -85,6 +86,41 @@ test('reads new scalar query options from discovery and preserves false and zero
   assert.equal(lookup.inputSchema.properties.active.type, 'boolean');
   await client.call('lookup', { id: 'record', active: false, limit: 0 });
   assert.equal(requests.at(-1).url, '/api/records/record?limit=0&active=false');
+});
+
+test('validates bearer requirements, identity mapping and parameter bindings before signing in', async t => {
+  for (const change of [
+    spec => { delete spec.security; },
+    spec => { spec.components.securitySchemes.bearerAuth.scheme = 'basic'; },
+    spec => { spec.paths['/api/records/{id}'].get.security = []; },
+    spec => { spec.paths['/api/auth/me'].get['x-required-role'] = 'admin'; },
+    spec => { spec.paths['/api/other'] = spec.paths['/api/auth/me']; delete spec.paths['/api/auth/me']; },
+    spec => { spec.paths['/api/records/{id}'].get.parameters = []; },
+    spec => { spec.paths['/api/auth/me'].get.parameters = [idParam]; },
+  ]) {
+    const spec = document();
+    change(spec);
+    const { origin, requests } = await fixture(t, { spec });
+    await assert.rejects(connect({ origin, token }), /bearer|staffMe|operation/);
+    assert.deepEqual(requests.map(r => [r.url, r.auth]), [['/openapi/agent.json', undefined]]);
+  }
+});
+
+test('a stalled write response expires once and directs the caller to check its saved state', async t => {
+  const arrived = Promise.withResolvers();
+  const { origin, requests } = await fixture(t, { responder(req, res) {
+    res.writeHead(200);
+    res.flushHeaders();
+    arrived.resolve();
+  } });
+  const client = await connect({ origin, token });
+  const deadline = new AbortController();
+  t.mock.method(AbortSignal, 'timeout', () => deadline.signal);
+  const pending = client.call('save', { id: 'record', body: { name: 'update' } });
+  await arrived.promise;
+  deadline.abort();
+  await assert.rejects(pending, /timed out.*saved state/);
+  assert.equal(requests.filter(r => r.method === 'PATCH').length, 1);
 });
 
 test('pre-dispatch cancellation prevents a write and in-flight cancellation stops waiting', async t => {
@@ -142,6 +178,30 @@ test('propagates useful HTTP statuses and messages and suppresses token-bearing 
       assert.equal(error.message.includes(message), message === 'Reload the current revision');
       return true;
     });
+  }
+});
+
+test('withholds reflected credentials in successful responses and preserves ordinary records', async t => {
+  let result;
+  t.mock.method(globalThis, 'fetch', async url => {
+    const path = new URL(url).pathname;
+    if (path === '/openapi/agent.json') return Response.json(document());
+    if (path === '/api/auth/me') return Response.json({ user_id: 'user', org_id: 'org', role: 'viewer' });
+    return Response.json(result);
+  });
+  for (const credential of [token, 'r']) {
+    const client = await connect({ origin: 'https://central.example', token: credential });
+    const call = () => client.call('lookup', { id: 'record' });
+    result = { records: ['ordinary record'] };
+    assert.deepEqual(await call(), result);
+    for (const value of [credential, 'Bearer ' + credential]) {
+      result = { records: [{ detail: value }] };
+      await assert.rejects(call(), /response was withheld/);
+    }
+    if (credential === token) {
+      result = { info: 'header received (' + credential + ')' };
+      await assert.rejects(call(), /response was withheld/);
+    }
   }
 });
 

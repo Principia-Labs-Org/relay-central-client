@@ -23,6 +23,14 @@ class Model(BaseHTTPRequestHandler):
     def log_message(self, *_):
         pass
 
+    def accepts_request(self, body=b""):
+        tenants = self.server.tenants
+        if tenants is not None and tenants.includes_token(self.path.encode(), self.headers.as_bytes(), body):
+            self.server.leaked = True
+            self.send_error(400)
+            return False
+        return True
+
     def reply(self, body, mime):
         data = body.encode()
         self.send_response(200)
@@ -32,6 +40,8 @@ class Model(BaseHTTPRequestHandler):
         self.wfile.write(data)
 
     def do_GET(self):
+        if not self.accepts_request():
+            return
         row = {"id": MODEL, "object": "model", "metadata": {"muse-code": {
             "release_date": "2026-01-01", "is_hidden": False, "limit": {"context": 128000, "output": 1024}
         }}}
@@ -39,8 +49,8 @@ class Model(BaseHTTPRequestHandler):
 
     def do_POST(self):
         raw = self.rfile.read(int(self.headers["Content-Length"]))
-        if self.server.tenants is not None:
-            assert self.server.tenants.token.encode() not in raw
+        if not self.accepts_request(raw):
+            return
         body = json.loads(raw)
         case = self.server.case
         names = [tool.get("name") or tool.get("function", {}).get("name", "") for tool in body.get("tools", [])]
@@ -131,9 +141,10 @@ def decoded_results(value):
 def check(host, tenants, case):
     with tempfile.TemporaryDirectory() as tmp, ThreadingHTTPServer(("127.0.0.1", 0), Model) as model:
         base = f"http://127.0.0.1:{model.server_port}/v1"
-        model.called = model.verified = False
+        model.called = model.verified = model.leaked = False
         model.tenants, model.case = tenants, case
-        model.identity = json.loads(subprocess.check_output(["relay-central", "whoami"]))
+        if tenants is None:
+            model.identity = json.loads(subprocess.check_output(["relay-central", "whoami"]))
         Thread(target=model.serve_forever, daemon=True).start()
         env = dict(os.environ)
         if host == "muse":
@@ -160,6 +171,8 @@ def check(host, tenants, case):
         try:
             result = subprocess.run(command, cwd=tmp, env=env, input="loopback-fixture\n" if host == "muse" else "",
                                     capture_output=True, text=True, timeout=60)
+            if model.leaked:
+                raise RuntimeError(f"{host} sent a fixture credential to the model endpoint")
             if result.returncode or not model.verified:
                 raise RuntimeError(f"{host} exited {result.returncode}, requested {case.tool}={model.called}, "
                                    f"matched expected tool result={model.verified}")

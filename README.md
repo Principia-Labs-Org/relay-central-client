@@ -12,18 +12,24 @@ Choose your app for a copyable setup prompt.
 | Coding agents | [Codex](https://docs.hellocrew.ai/clients/codex/) · [Claude Code](https://docs.hellocrew.ai/clients/claude/) · [Grok Build](https://docs.hellocrew.ai/clients/grok/) · [Muse Code](https://docs.hellocrew.ai/clients/muse/) |
 | Terminal and other MCP hosts | [CLI](https://docs.hellocrew.ai/clients/cli/) · [MCP](https://docs.hellocrew.ai/clients/mcp/) |
 
-For CLI and local MCP setups, use Node.js 22 or newer and install the tagged client on the computer that will run it. For Grok Bot this is the Bot’s computer. Personal Muse connects directly to the Central API through a Custom Connector. [Host-specific instructions](docs/hosts.md)
+For CLI and local MCP setups, use Node.js 22 or newer, Git and a user-writable npm installation. Start in an empty directory you can keep. Each command must succeed before you continue. Grok Bot needs its own secure connector setup on its shared computer. Personal Muse can use a Custom Connector with a credential restricted to Central. [Host-specific instructions](docs/hosts.md)
 
 ```sh
-git clone --branch v1.0.0 --depth 1 https://github.com/Principia-Labs-Org/relay-central-client.git
+git clone --branch v1.0.1 --depth 1 https://github.com/Principia-Labs-Org/relay-central-client.git
 cd relay-central-client
-npm ci
-npm link
+npm ci --ignore-scripts
+npm link --ignore-scripts
+relay-central --version
+```
+
+Check that your host resolves `relay-central` to this checkout and that the version is **1.0.1**. An existing checkout or executable with a different version needs its own clean install.
+
+```sh
 relay-central login --origin https://central.hellocrew.ai
 relay-central whoami
 ```
 
-Get your existing organization API token from the person who provisioned your HelloCrew account or your organization's secret manager. Enter it in the hidden prompt in your own terminal. Login verifies the token and reports the organization and role before replacing your saved login. Check that both match the account you intend to use. Production is the default origin. Use your staging origin to select staging.
+Get your existing organization API token from the person who provisioned your HelloCrew account or your organization's secret manager. Use your own terminal under the OS account that will launch the host, with `CENTRAL_ORIGIN` and `CENTRAL_TOKEN` unset so login uses the hidden prompt. Login verifies the token with `staffMe`, replaces this OS user’s saved account and reports the organization and role. Check both before continuing and reconnect existing host sessions after switching accounts. Production is the default origin. Use your staging origin to select staging.
 
 For a token provided by a secret manager or a protected file, use stdin.
 
@@ -31,7 +37,7 @@ For a token provided by a secret manager or a protected file, use stdin.
 relay-central login --origin https://staging.central.hellocrew.ai --token-stdin < /private/path/to/token
 ```
 
-The client stores one origin and token together under `$XDG_CONFIG_HOME/relay-central-client/credentials.json` (default `~/.config/relay-central-client/credentials.json`). On POSIX systems the directory and file use modes 0700 and 0600. `relay-central logout` removes the local file. Token revocation belongs to Central. For ephemeral automation, supply both `CENTRAL_ORIGIN` and `CENTRAL_TOKEN` in the process environment. They take precedence over the saved login.
+The client stores one origin and token together under `$XDG_CONFIG_HOME/relay-central-client/credentials.json` (default `~/.config/relay-central-client/credentials.json`). If set, `XDG_CONFIG_HOME` must be an absolute path. On POSIX systems the client creates a mode 0700 directory and a mode 0600 file. On Windows use a profile or configuration directory accessible only to your account. `relay-central logout` removes the local file. Token revocation belongs to Central. For ephemeral automation, supply both `CENTRAL_ORIGIN` and `CENTRAL_TOKEN` in the process environment. Both values must be set together, including when `--origin` is supplied with an environment token. They take precedence over the saved login.
 
 ## Use the CLI
 
@@ -54,7 +60,7 @@ relay-central call updateOrganizationConfiguration --json '{"body":{"expected_re
 relay-central call getOrganizationConfiguration
 ```
 
-On HTTP 409, reload the record and reassess the change. For a lost write response, check the saved state before retrying. When editing phone, intake or campaign configuration, preserve the other fields required by the operation. [Central configuration examples](https://github.com/Principia-Labs-Org/relay-central/blob/main/docs/organization-api.md)
+On HTTP 409, reload the record and reassess the change. For a lost write response, check the saved state before retrying. When editing phone, intake or campaign configuration, preserve the other fields required by the operation. Use `relay-central describe <operationId>` for the arguments and required revision. [Public organization API schema](https://central.hellocrew.ai/openapi/agent.json)
 
 ## Use it with an agent
 
@@ -72,4 +78,4 @@ relay-central mcp call staffWorkQueue --json '{"view":"new","limit":5}'
 
 The publication and regression workflow uses the installed package against disposable Central and PostgreSQL. [Run the tests](docs/testing.md)
 
-The v1.0.0 two-organization tests cover the CLI, MCP, Codex, Claude Code, Grok Build and Muse Code. Organization A can update its campaign. Central returns HTTP 404 for A's read and revision-valid edit of B's campaign, and B's own token confirms its record and revision are intact. The four desktop and personal app guides describe vendor-documented connection methods. Signed-in end-to-end checks in those four interfaces are pending. [Tenant isolation evidence and reproduction](test/evidence/README.md)
+The two-organization release tests cover the CLI, MCP, Codex, Claude Code, Grok Build and Muse Code. Organization A can update its campaign. Central returns HTTP 404 for A's read and revision-valid edit of B's campaign, and B's own token confirms its record and revision are intact. The four desktop and personal app guides describe vendor-documented connection methods. Signed-in end-to-end checks in those four interfaces are pending. [Tenant isolation evidence and reproduction](https://github.com/Principia-Labs-Org/relay-central-client/blob/v1.0.1/test/evidence/README.md)

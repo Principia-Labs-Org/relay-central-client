@@ -32,7 +32,7 @@ class TenantCheck:
                 or origin.path not in ("", "/") or origin.query or origin.fragment):
             raise ValueError("Native write tests require a disposable loopback Central origin.")
         self._a, self._b = pair["A"], pair["B"]
-        self.token = self._a["token"]
+        self._tokens = (self._a["token"].encode(), self._b["token"].encode())
         assert all(self._a[k] != self._b[k] for k in ("org_id", "token", "campaign_id"))
         self._position = 0
         for account in (self._a, self._b):
@@ -56,6 +56,9 @@ class TenantCheck:
             Case("B read denied", "campaign", {"id": b_id}),
             Case("B update denied", "updateCampaign", {"id": b_id, "body": self._b["patch"]}),
         )
+
+    def includes_token(self, *parts):
+        return any(token in part for token in self._tokens for part in parts)
 
     def _read(self, account, path):
         origin = urlsplit(self.origin)

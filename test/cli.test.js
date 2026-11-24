@@ -27,9 +27,13 @@ test('saved login, failed replacement, logout and account changes across a runni
   t.after(() => rm(dir, { recursive: true, force: true }));
   const env = { XDG_CONFIG_HOME: dir };
   const staff = { get: { operationId: 'staffMe', 'x-required-role': 'viewer' } };
+  const doc = { security: [{ bearerAuth: [] }], components: { securitySchemes: { bearerAuth: { type: 'http', scheme: 'bearer' } } },
+    paths: { '/api/auth/me': staff } };
+  let requests = 0;
   const http = createServer((req, res) => {
+    requests++;
     res.setHeader('content-type', 'application/json');
-    if (req.url === '/openapi/agent.json') return res.end(JSON.stringify({ paths: { '/api/auth/me': staff } }));
+    if (req.url === '/openapi/agent.json') return res.end(JSON.stringify(doc));
     const login = { 'Bearer test-first': 'org-one', 'Bearer test-second': 'org-two' }[req.headers.authorization];
     if (req.url === '/api/auth/me' && login) {
       return res.end(JSON.stringify({ org_id: login, user_id: 'fixture', role: 'viewer' }));
@@ -54,6 +58,22 @@ test('saved login, failed replacement, logout and account changes across a runni
     assert.equal(incomplete.code, 1);
     assert.match(incomplete.stderr, /both/);
   }
+  const before = requests;
+  for (const variables of [{ CENTRAL_TOKEN: 'test-second' }, { CENTRAL_TOKEN: 'test-second', CENTRAL_ORIGIN: 'https://other.invalid' }]) {
+    const unpaired = await command({ ...env, ...variables }, ['login', '--origin', origin]);
+    assert.equal(unpaired.code, 1);
+    assert.match(unpaired.stderr, /CENTRAL_ORIGIN/);
+    assert.ok(!unpaired.stderr.includes('test-second'));
+  }
+  assert.equal(requests, before);
+  const badFlag = await command(env, ['call', 'staffMe', '--misplaced-private-value']);
+  assert.equal(badFlag.code, 1);
+  assert.ok(!badFlag.stderr.includes('misplaced-private-value'));
+  const paired = await command({ ...env, CENTRAL_ORIGIN: origin, CENTRAL_TOKEN: 'test-first' }, ['login']);
+  assert.equal(JSON.parse(paired.stdout).org_id, 'org-one');
+  const fromPipe = await command({ ...env, CENTRAL_ORIGIN: 'https://other.invalid', CENTRAL_TOKEN: 'unused' },
+    ['login', '--origin', origin, '--token-stdin'], 'test-first\n');
+  assert.equal(JSON.parse(fromPipe.stdout).org_id, 'org-one');
 
   const peer = new Client({ name: 'test', version: '1' });
   await peer.connect(new StdioClientTransport({ command: process.execPath, args: [cli, 'mcp'], env }));

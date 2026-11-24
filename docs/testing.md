@@ -1,6 +1,6 @@
 # Verify the installed client
 
-Run the client unit tests with Node 22 or newer.
+Run the following commands from a checkout of the public client repository using Node 22 or newer. The test harnesses live in the checkout. [Client repository](https://github.com/Principia-Labs-Org/relay-central-client)
 
 ```sh
 npm ci

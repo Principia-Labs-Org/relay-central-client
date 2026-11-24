@@ -1,6 +1,6 @@
 {
   "name": "@principia-labs/relay-central-client",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Organization CLI and MCP tools for Relay Central's published OpenAPI contract",
   "private": true,
   "type": "module",

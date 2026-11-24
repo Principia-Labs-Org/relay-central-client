@@ -1,22 +1,22 @@
 # Connect your agent to Relay Central
 
-For a local MCP connection, install the client and run `relay-central login` from the OS account that will launch the server. The launch command is `relay-central` with one argument, `mcp`. The server uses the login saved on that computer. Enter the token at the hidden terminal prompt or through the host’s secure credential mechanism. [CLI installation and login](../README.md#install-and-sign-in)
+For a local MCP host on your own computer, install the tagged client and run `relay-central login` in your own terminal with the same OS account and configuration directory the host uses. The launch command is `relay-central` with one argument, `mcp`. The server uses the saved login when both `CENTRAL_TOKEN` and `CENTRAL_ORIGIN` are unset. For a managed Grok Bot or personal Muse, follow the credential steps for that app below. [CLI installation and login](../README.md#install-and-sign-in)
 
 ## Desktop and personal apps
 
-The following routes use each vendor’s documented connection features. Signed-in end-to-end checks in these four interfaces are pending. The v1.0.0 release exercised the CLI, MCP, Codex, Claude Code, Grok Build and Muse Code. [Release evidence](../test/evidence/README.md)
+The following routes use each vendor’s documented connection features. Signed-in end-to-end checks in these four interfaces are pending. The installed-client release tests exercise the CLI, MCP, Codex, Claude Code, Grok Build and Muse Code. [Release evidence](https://github.com/Principia-Labs-Org/relay-central-client/blob/v1.0.1/test/evidence/README.md)
 
 ### Grok Bot
 
-1. Install the tagged CLI on **the Bot’s computer**. When you control a terminal on that computer, run `relay-central login --origin https://central.hellocrew.ai` and enter the organization token at its hidden prompt. If your Bot supports passing a secure secret to the connector process, supply the token as `CENTRAL_TOKEN` through Grok’s secure secret card and set `CENTRAL_ORIGIN` to `https://central.hellocrew.ai` for the connector process. Keep the token out of chat, commands and connector arguments.
-2. In Grok Bot’s desktop app, open **Connect apps → Add a custom connector**. Name it **Relay Central**, choose **Command**, enter the installed `relay-central` executable as the command and `mcp` as its only argument. Select **Add plugin**. A command connector can also be available to other Bots on the same account.
-3. Attach the connector in a new message and ask it to call `staffMe`. Confirm the organization and role. [Grok Bot setup prompt](https://docs.hellocrew.ai/clients/grok-bot/) · [Grok Bot custom connectors](https://docs.x.ai/grok-bot/computer-and-apps) · [Grok Bot secrets](https://docs.x.ai/grok-bot/vault)
+1. Check who can use this connection first. Grok shares the computer and command connectors across all Bots on the account. Proceed only if all of them may use this Central role and your connector can bind a secure secret to its command process. Grok documents secure secret storage. A secret card alone does not establish that the command can receive it.
+2. Install the tagged CLI on the **Bot’s computer** using the clone and npm steps in the README. Skip CLI login on the shared computer. Bind the secret as `CENTRAL_TOKEN` and set `CENTRAL_ORIGIN` to `https://central.hellocrew.ai` for that same process. Enter the token only through Grok’s secure secret card. If secure process binding is unavailable, stop before entering a credential.
+3. In the desktop app open **Connect apps → Add a custom connector**. Choose **Command**, name it **Relay Central**, set the command to the installed executable and enter `mcp` as its only argument. Choose **Add plugin**, attach the connector to a new message and ask it to call `staffMe`. Confirm the organization and role. [Grok Bot setup prompt](https://docs.hellocrew.ai/clients/grok-bot/) · [Grok Bot custom connectors](https://docs.x.ai/grok-bot/computer-and-apps) · [Grok Bot secrets](https://docs.x.ai/grok-bot/vault)
 
 ### Meta Muse (personal)
 
 Paste this request into personal Muse to create a **Custom Connector** that calls Central’s API directly.
 
-> Create a Relay Central Custom Connector using https://central.hellocrew.ai/openapi/agent.json. Use my organization API token as an HTTP Bearer credential only for requests to https://central.hellocrew.ai. Ask me to enter it through your secure credential form. Call staffMe (GET /api/auth/me) and show my organization and role. Finish setup after that read.
+> Create a Relay Central Custom Connector using https://central.hellocrew.ai/openapi/agent.json. Fetch the schema without credentials. Before requesting a token, show me the connector’s destination and authentication settings. Limit authenticated requests to https://central.hellocrew.ai, disable redirects and use an Authorization: Bearer header. If Muse cannot enforce those settings or offer secure credential entry, stop. Once I confirm, let me enter my organization token in Muse’s secure form. Call staffMe (GET /api/auth/me), show my organization and role, and stop after that read.
 
 Enter the token in Muse’s secure credential form. If Muse asks for the value in ordinary chat, pause setup. You can manage the connection in **Settings → Connectors**. [Personal Muse setup prompt](https://docs.hellocrew.ai/clients/muse-personal/) · [Meta’s connector guide](https://www.meta.com/en-gb/help/superintelligence/1687253048996149/)
 
@@ -42,29 +42,33 @@ Enter the token in Muse’s secure credential form. If Muse asks for the value i
 
 This connection runs on your computer. Cloud chats require a separately configured web-compatible plugin and authorization. [ChatGPT Desktop setup prompt](https://docs.hellocrew.ai/clients/chatgpt-desktop/) · [OpenAI’s MCP configuration guide](https://learn.chatgpt.com/docs/extend/mcp#connect-codex-to-an-mcp-server)
 
-For a workspace plugin usable in an eligible local ChatGPT thread, a workspace admin can open **Admin Console → Plugins → Add → Import marketplace**. Enter `https://github.com/Principia-Labs-Org/relay-central-client`, leave the marketplace path empty and select the tag `v1.0.0`. Review the imported plugin and make it available to the intended roles. Each user still needs the client installed and signed in on their computer. [OpenAI marketplace import](https://help.openai.com/en/articles/20001504-importing-and-syncing-plugin-marketplaces-from-github) · [ChatGPT plugin availability](https://help.openai.com/en/articles/20001256-plugins-in-chatgpt)
+For a workspace plugin usable in an eligible local ChatGPT thread, a workspace admin can open **Admin Console → Plugins → Add → Import marketplace**. Enter `https://github.com/Principia-Labs-Org/relay-central-client`, leave the marketplace path empty and select the tag `v1.0.1`. Review the import results and access for the intended roles. Each user still needs the client installed and signed in on their computer. If the workspace offers the plugin in a local desktop thread, install it, start a new thread and ask it to call `staffMe`. [OpenAI marketplace import](https://help.openai.com/en/articles/20001504-importing-and-syncing-plugin-marketplaces-from-github) · [ChatGPT plugin availability](https://help.openai.com/en/articles/20001256-plugins-in-chatgpt)
 
 ## Coding agent plugins
 
 ### Codex
 
+From the tagged client checkout, run the following in a shell that supports `$PWD`. You can also substitute the absolute path to that checkout.
+
 ```sh
-codex plugin marketplace add Principia-Labs-Org/relay-central-client
+codex plugin marketplace add "$PWD"
 codex plugin add relay-central@relay-platform
 codex mcp get relay-central
 ```
 
-Start a new Codex session. Ask it to use the Relay Central `staffMe` tool to identify your organization and role. For a local checkout, pass its absolute path to `codex plugin marketplace add`. [Codex plugin guide](https://developers.openai.com/plugins/build/plugins)
+Start a new Codex session. Ask it to use the Relay Central `staffMe` tool to identify your organization and role. [Codex plugin guide](https://developers.openai.com/plugins/build/plugins)
 
 ### Claude Code
 
+Use the absolute path to the same tagged checkout as the marketplace source.
+
 ```sh
-claude plugin marketplace add Principia-Labs-Org/relay-central-client
+claude plugin marketplace add "$PWD"
 claude plugin install relay-central@relay-platform
 claude mcp list
 ```
 
-The MCP health check should show `plugin:relay-central:relay-central` as connected. A local checkout also works as the marketplace source. [Claude Code plugin documentation](https://code.claude.com/docs/en/plugins/manifest-reference)
+The MCP health check should show `plugin:relay-central:relay-central` as connected. [Claude Code plugin documentation](https://code.claude.com/docs/en/plugins/manifest-reference)
 
 ### Grok Build
 

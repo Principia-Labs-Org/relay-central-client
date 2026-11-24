@@ -12,6 +12,7 @@ import sys
 import tempfile
 import time
 import uuid
+from urllib.parse import unquote, urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
 CHECKOUT = Path(os.environ.get("CENTRAL_CHECKOUT", ROOT.parent / "relay-central")).resolve()
@@ -28,7 +29,17 @@ def installed_cli(directory):
     prefix = directory / "installed"
     subprocess.run(["npm", "install", "--prefix", prefix, "--ignore-scripts", "--no-audit",
                     "--no-fund", archive], check=True)
-    return prefix / "node_modules/.bin/relay-central"
+    binary = prefix / "node_modules/.bin/relay-central"
+    package = binary.resolve().parents[1]
+    for path in (".agents/plugins/marketplace.json", ".claude-plugin/marketplace.json",
+                 "plugins/relay-central/.claude-plugin/plugin.json", "plugins/relay-central/.mcp.json"):
+        assert (package / path).is_file(), f"Missing plugin file in installed tarball: {path}"
+    for document in [package / "README.md", *sorted((package / "docs").glob("*.md"))]:
+        for link in re.findall(r"\]\(([^)\s]+)\)", document.read_text()):
+            target = urlsplit(link)
+            if target.path and not target.scheme and not target.netloc:
+                assert (document.parent / unquote(target.path)).exists(), f"Broken installed link in {document.name}: {link}"
+    return binary
 
 
 @contextlib.contextmanager

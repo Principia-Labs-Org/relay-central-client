@@ -23,7 +23,11 @@ class Central(BaseHTTPRequestHandler):
     def do_GET(self):
         status = 200
         if self.path == "/openapi/agent.json":
-            data = {"paths": {"/api/auth/me": {"get": {"operationId": "staffMe", "x-required-role": "viewer"}}}}
+            data = {
+                "security": [{"bearerAuth": []}],
+                "components": {"securitySchemes": {"bearerAuth": {"type": "http", "scheme": "bearer"}}},
+                "paths": {"/api/auth/me": {"get": {"operationId": "staffMe", "x-required-role": "viewer"}}},
+            }
         elif self.path == "/api/auth/me":
             file = self.server.credentials
             self.server.pre_auth.append(file.read_bytes() if file.exists() else None)

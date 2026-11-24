@@ -24,17 +24,34 @@ export function validateToken(token) {
   }
 }
 
+function reflectsCredential(value, token) {
+  // Issued credentials are long. Short fixture tokens may also be ordinary
+  // substrings of a record, so match them only as a value or bearer header.
+  if (typeof value === 'string') {
+    return value === token || value.includes('Bearer ' + token) || (token.length >= 12 && value.includes(token));
+  }
+  if (value === null || typeof value !== 'object') return false;
+  return Object.entries(value).some(([key, child]) =>
+    (token.length >= 12 && key.includes(token)) || reflectsCredential(child, token));
+}
+
 async function requestJson(url, options, token) {
+  const deadline = AbortSignal.timeout(30_000);
+  const signal = options.signal ? AbortSignal.any([options.signal, deadline]) : deadline;
   let response;
+  let data;
   try {
-    response = await fetch(url, { ...options, redirect: 'error' });
+    response = await fetch(url, { ...options, signal, redirect: 'error' });
+    data = await response.json();
   } catch {
-    if (options.signal?.aborted) throw new Error('Central request cancelled.');
-    throw new Error('Central request failed. Check the origin and connection.');
+    const checkWrite = options.method && options.method !== 'GET' ? ' Check the saved state before retrying the change.' : '';
+    if (options.signal?.aborted) throw new Error('Central request cancelled.' + checkWrite);
+    if (deadline.aborted) throw new Error('Central request timed out.' + checkWrite);
+    if (!response) throw new Error('Central request failed. Check the origin and connection.' + checkWrite);
+    if (response.ok) throw new Error('Central returned an invalid JSON response.' + checkWrite);
   }
   if (!response.ok) {
-    const error = await response.json().catch(() => null);
-    const message = typeof error?.error === 'string' ? error.error : '';
+    const message = typeof data?.error === 'string' ? data.error : '';
     // Only display ordinary Central error text. A proxy may return arbitrary content.
     const safe = response.status < 500 && message && message.length <= 512 && !/[\x00-\x1f\x7f-\x9f]/.test(message)
       && !message.includes(token) && !/\b(?:authorization\s*:|bearer\s+|set-cookie\s*:)/i.test(message);
@@ -42,12 +59,11 @@ async function requestJson(url, options, token) {
     failure.status = response.status;
     throw failure;
   }
-  try {
-    return await response.json();
-  } catch {
-    if (options.signal?.aborted) throw new Error('Central request cancelled.');
-    throw new Error('Central returned an invalid JSON response.');
+  if (options.headers.Authorization && reflectsCredential(data, token)) {
+    const checkWrite = options.method !== 'GET' ? ' Check the saved state before retrying the change.' : '';
+    throw new Error('Central returned credential material. The response was withheld.' + checkWrite);
   }
+  return data;
 }
 
 // MCP tools get a self-contained schema. Keep shared and recursive references
@@ -82,29 +98,44 @@ function toolSchema(input, components) {
 
 function readOperations(spec) {
   if (!isObject(spec?.paths)) throw new Error('Central returned an invalid agent document.');
+  const scheme = spec.components?.securitySchemes?.bearerAuth;
+  if (scheme?.type !== 'http' || typeof scheme.scheme !== 'string' || scheme.scheme.toLowerCase() !== 'bearer') {
+    throw new Error('Central did not advertise organization bearer authentication.');
+  }
   const operations = new Map();
   for (const [path, methods] of Object.entries(spec.paths)) {
-    if (!path.startsWith('/api/') || /[\\?#]/.test(path) || /(?:^|\/)\.{1,2}(?:\/|$)/.test(path)) {
+    if (!isObject(methods) || !path.startsWith('/api/') || /[\\?#]/.test(path) || /(?:^|\/)\.{1,2}(?:\/|$)/.test(path)) {
       throw new Error('Central advertised an invalid operation path.');
     }
     for (const [method, operation] of Object.entries(methods)) {
       if (!supportedMethods.has(method)) continue;
+      if (!isObject(operation)) throw new Error('Central advertised an invalid operation.');
+      const security = Object.hasOwn(operation, 'security') ? operation.security : spec.security;
+      if (!Array.isArray(security) || security.length !== 1 || !isObject(security[0])
+          || Object.keys(security[0]).length !== 1 || !Array.isArray(security[0].bearerAuth)
+          || security[0].bearerAuth.length !== 0) {
+        throw new Error('Central advertised an operation without the required organization bearer authentication.');
+      }
       const name = operation.operationId;
       const requiredRole = operation['x-required-role'];
       if (typeof name !== 'string' || !name || operations.has(name) || !roleRank.has(requiredRole)) {
         throw new Error('Central advertised an invalid operation identity or role.');
       }
       const parameters = operation.parameters ?? [];
+      if (!Array.isArray(parameters)) throw new Error('Central advertised invalid operation parameters.');
+      const templateNames = new Set([...path.matchAll(/\{([^{}]+)\}/g)].map(match => match[1]));
       const properties = new Map();
       const required = [];
       for (const param of parameters) {
-        if (!['path', 'query'].includes(param.in) || typeof param.name !== 'string'
-            || properties.has(param.name) || param.name === 'body') {
+        if (!['path', 'query'].includes(param?.in) || typeof param.name !== 'string'
+            || !param.name || properties.has(param.name) || param.name === 'body'
+            || (param.in === 'path' && !templateNames.delete(param.name))) {
           throw new Error('Central advertised an unsupported operation parameter.');
         }
         properties.set(param.name, { ...param.schema, ...(param.description && { description: param.description }) });
         if (param.required || param.in === 'path') required.push(param.name);
       }
+      if (templateNames.size) throw new Error('Central advertised an incomplete operation path template.');
       if (operation.requestBody) {
         const body = operation.requestBody.content?.['application/json']?.schema;
         if (!body) throw new Error('Central advertised an unsupported request body.');
@@ -144,7 +175,7 @@ function invoke(origin, token, operation, args, signal) {
     }
   }
   const url = new URL(path, origin);
-  if (url.origin !== origin || !url.pathname.startsWith('/api/') || /[{}]/.test(path)) {
+  if (url.origin !== origin || url.pathname !== path || !url.pathname.startsWith('/api/') || /[{}]/.test(path)) {
     throw new Error('Invalid Central operation destination.');
   }
   url.search = query.toString();
@@ -163,10 +194,13 @@ export async function connect({ origin, token }) {
   const spec = await requestJson(origin + '/openapi/agent.json', { headers: { Accept: 'application/json' } }, token);
   const catalog = readOperations(spec);
   const me = catalog.get('staffMe');
-  if (me?.method !== 'GET') throw new Error('Central did not advertise the staffMe identity operation.');
+  if (me?.method !== 'GET' || me.path !== '/api/auth/me' || me.requiredRole !== 'viewer'
+      || Object.keys(me.inputSchema.properties).length !== 0) {
+    throw new Error('Central did not advertise staffMe as the authenticated GET /api/auth/me identity operation.');
+  }
   const identity = await invoke(origin, token, me, {});
-  if (!roleRank.has(identity?.role) || typeof identity?.org_id !== 'string' || !identity.org_id
-      || typeof identity.user_id !== 'string' || !identity.user_id) {
+  if (!roleRank.has(identity?.role) || typeof identity?.org_id !== 'string' || !identity.org_id.trim()
+      || typeof identity.user_id !== 'string' || !identity.user_id.trim()) {
     throw new Error('Central returned an invalid organization identity.');
   }
   const allowed = new Map([...catalog].filter(([, op]) => roleRank.get(op.requiredRole) <= roleRank.get(identity.role)));

@@ -62,9 +62,9 @@ async function login(args) {
   if (values['token-stdin']) {
     if (process.stdin.isTTY) throw new Error('Pipe your token to --token-stdin, or omit the flag for a hidden prompt.');
     token = (await stdinText()).trim();
-  } else if (process.env.CENTRAL_TOKEN) {
-    if (!values.origin && !envOrigin) throw new Error('Pair CENTRAL_TOKEN with CENTRAL_ORIGIN or --origin.');
-    if (envOrigin && normalizeOrigin(envOrigin) !== origin) throw new Error('CENTRAL_ORIGIN differs from the requested login origin.');
+  } else if (process.env.CENTRAL_TOKEN !== undefined) {
+    if (!envOrigin) throw new Error('Pair CENTRAL_TOKEN with CENTRAL_ORIGIN, or unset it for the hidden prompt.');
+    if (normalizeOrigin(envOrigin) !== origin) throw new Error('CENTRAL_ORIGIN differs from the requested login origin.');
     token = process.env.CENTRAL_TOKEN;
   } else {
     token = await promptToken();
@@ -86,7 +86,13 @@ async function credentials() {
 }
 
 async function callArgs(args) {
-  const { values, positionals } = parseArgs({ args, allowPositionals: true, options: { json: { type: 'string' } } });
+  let parsed;
+  try {
+    parsed = parseArgs({ args, allowPositionals: true, options: { json: { type: 'string' } } });
+  } catch {
+    throw new Error('Use call <operationId> [--json JSON|-].');
+  }
+  const { values, positionals } = parsed;
   if (positionals.length !== 1) throw new Error('Supply one operation ID. Run relay-central tools to list names.');
   let input;
   try {
