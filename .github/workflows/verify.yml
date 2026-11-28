@@ -1,5 +1,11 @@
 name: Verify installed client
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+    inputs:
+      central_ref:
+        description: The exact Central API revision to qualify with this client
+        type: string
+        default: 92ac5d5a6c8f40e141b162857462dcea2f039f22
 permissions:
   contents: read
 
@@ -11,13 +17,19 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 22
-      - run: npm ci && npm test
+      - run: npm ci && npm run test:coverage
+      - name: Upload client coverage
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: central-client-coverage
+          path: coverage/
       - run: python3 test/tty-login.py
       - name: Check out the qualified Central API and fixtures
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           repository: Principia-Labs-Org/relay-central
-          ref: 92ac5d5a6c8f40e141b162857462dcea2f039f22
+          ref: ${{ inputs.central_ref }}
           path: central-fixture
           token: ${{ secrets.CENTRAL_READ_TOKEN }}
           persist-credentials: false

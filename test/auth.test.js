@@ -67,3 +67,13 @@ test('refuses malformed credentials and insecure login paths', { skip: typeof pr
   await assert.rejects(loadCredentials(options), /private/);
   await assert.rejects(saveCredentials(first, options), /private/);
 });
+
+test('a failed atomic rename removes its private temporary file', async t => {
+  const { file, configDir, options } = await fixture(t);
+  await mkdir(file, { mode: 0o700, recursive: true });
+  await assert.rejects(saveCredentials(first, options));
+  assert.deepEqual(await readdir(configDir), ['credentials.json']);
+  assert.ok((await lstat(file)).isDirectory());
+  await assert.rejects(loadCredentials(options), /regular file|0600/);
+  await assert.rejects(clearCredentials(options));
+});

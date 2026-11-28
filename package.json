@@ -9,6 +9,7 @@
   "files": ["bin", "src", "plugins", ".agents/plugins/marketplace.json", ".claude-plugin/marketplace.json", "docs", "README.md"],
   "scripts": {
     "test": "node --test test/*.test.js",
+    "test:coverage": "node test/coverage.js",
     "test:e2e": "python3 test/central-e2e.py"
   },
   "dependencies": { "@modelcontextprotocol/sdk": "1.32.2" }

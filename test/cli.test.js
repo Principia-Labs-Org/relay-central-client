@@ -44,6 +44,23 @@ test('saved login, failed replacement, logout and account changes across a runni
   await new Promise(resolve => http.listen(0, '127.0.0.1', resolve));
   t.after(() => { http.closeAllConnections(); return new Promise(resolve => http.close(resolve)); });
   const origin = 'http://127.0.0.1:' + http.address().port;
+  assert.match((await command(env, ['--help'])).stdout, /Usage: relay-central/);
+  assert.match((await command(env, ['--version'])).stdout, /^\d+\.\d+\.\d+\n$/);
+  assert.match((await command(env, ['unsupported'])).stderr, /Unrecognized command/);
+  assert.match((await command(env, ['login', '--origin', origin])).stderr, /--token-stdin/);
+  assert.match((await command(env, ['whoami'])).stderr, /Sign in first/);
+  assert.match((await command(env, ['mcp', 'unsupported'])).stderr, /Use mcp/);
+  for (const [args, expected] of [
+    [['call'], /one operation ID/],
+    [['call', 'staffMe', '--json', '{'], /valid JSON/],
+    [['call', 'staffMe', '--json', 'null'], /arguments must be a JSON object/],
+    [['call', 'staffMe', '--json', '[]'], /arguments must be a JSON object/],
+  ]) {
+    const invalid = await command(env, args);
+    assert.equal(invalid.code, 1);
+    assert.match(invalid.stderr, expected);
+  }
+  assert.equal(requests, 0);
   const login = token => command(env, ['login', '--origin', origin, '--token-stdin'], token + '\n');
   const first = await login('test-first');
   assert.equal(first.code, 0);
@@ -74,6 +91,18 @@ test('saved login, failed replacement, logout and account changes across a runni
   const fromPipe = await command({ ...env, CENTRAL_ORIGIN: 'https://other.invalid', CENTRAL_TOKEN: 'unused' },
     ['login', '--origin', origin, '--token-stdin'], 'test-first\n');
   assert.equal(JSON.parse(fromPipe.stdout).org_id, 'org-one');
+  const tools = JSON.parse((await command(env, ['tools'])).stdout);
+  assert.deepEqual(tools.map(tool => tool.name), ['staffMe']);
+  const described = JSON.parse((await command(env, ['describe', 'staffMe'])).stdout);
+  assert.equal(described.requiredRole, 'viewer');
+  assert.match((await command(env, ['describe', 'other'])).stderr, /Operation unavailable/);
+  assert.deepEqual(JSON.parse((await command(env, ['mcp', 'list'])).stdout)
+    .map(tool => [tool.name, tool.annotations.readOnlyHint]), [['staffMe', true]]);
+  const denied = await command({ ...env, CENTRAL_ORIGIN: origin, CENTRAL_TOKEN: 'unknown-test-token' },
+    ['mcp', 'call', 'staffMe'], undefined);
+  assert.equal(denied.code, 1);
+  assert.match(denied.stderr, /401/);
+  assert.ok(!denied.stderr.includes('unknown-test-token'));
 
   const peer = new Client({ name: 'test', version: '1' });
   await peer.connect(new StdioClientTransport({ command: process.execPath, args: [cli, 'mcp'], env }));

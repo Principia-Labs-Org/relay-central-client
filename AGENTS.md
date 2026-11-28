@@ -1,5 +1,10 @@
 # Working on the Relay Central client
 
+For a major delivery, run `npm run test:coverage` and exercise the installed package
+against the exact Central candidate. The coverage gate requires strictly more
+than 90% for line, branch and function counters. It records the measured client
+commit and checks that every `bin` and `src` JavaScript file is present.
+
 This repository owns the Node.js CLI, token login, MCP client and stdio server, and the Codex, Claude Code, Grok Build and Muse Code plugin manifests. Central owns the API, credentials, organization data and permission decisions. Discover operations and roles from the selected origin's `/openapi/agent.json`. Keep the host adapters pointed at the same installed `relay-central mcp` executable.
 
 Keep the origin and credential paired. Verify the token with `staffMe` before saving a login. A host session must reconnect after switching accounts. Use a synthetic organization and disposable credentials for tests. Keep tokens, identities of real users, customer records, private logs and transcripts out of source, examples, releases and model input.
