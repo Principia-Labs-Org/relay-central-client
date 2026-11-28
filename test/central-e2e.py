@@ -72,6 +72,8 @@ class Client:
 
     def command(self, args, *, stdin=None, token=None):
         env = {**os.environ, "XDG_CONFIG_HOME": str(self.config)}
+        for key in ("CENTRAL_ORIGIN", "CENTRAL_TOKEN"):
+            env.pop(key, None)
         if token is not None:
             env.update(CENTRAL_ORIGIN=self.fixture.base, CENTRAL_TOKEN=token)
         return subprocess.run([self.binary, *args], input=stdin, capture_output=True, text=True,
